@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PB&J Sandwich Sequencing Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            background: linear-gradient(135deg, #FFE5B4, #FFCC5C);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .game-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .pb{ 
+            text-align: center;
+            color: #8B4513;
+            font-size: 2;
+            font-weight: lighter;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .instructions {
+            text-align: center;
+            font-size: 1.2em;
+            color: #654321;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: #FFF8DC;
+            border-radius: 10px;
+            border: 3px dashed #DEB887;
+        }
+
+        .game-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-bottom: 30px;
+        }
+
+        .steps-container, .sequence-container {
+            background: #F0F8FF;
+            border-radius: 15px;
+            padding: 20px;
+            border: 3px solid #87CEEB;
+        }
+
+        .container-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #4682B4;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .step-item {
+            background: linear-gradient(145deg, #FF6B9D, #FF8FA3);
+            color: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 12px;
+            cursor: move;
+            font-size: 1.1em;
+            text-align: center;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+            user-select: none;
+        }
+
+        .step-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+
+        .step-item.dragging {
+            opacity: 0.5;
+            transform: rotate(5deg);
+        }
+
+        .sequence-slot {
+            background: #E6F3FF;
+            border: 3px dashed #87CEEB;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 10px 0;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1em;
+            color: #4682B4;
+            position: relative;
+        }
+
+        .sequence-slot.drag-over {
+            background: #B0E0E6;
+            border-color: #4682B4;
+            border-style: solid;
+        }
+
+        .sequence-slot.filled {
+            background: linear-gradient(145deg, #98FB98, #90EE90);
+            border-color: #32CD32;
+            border-style: solid;
+        }
+
+        .sequence-slot::before {
+            content: attr(data-step);
+            position: absolute;
+            left: -40px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #4682B4;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .controls {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .btn {
+            background: linear-gradient(145deg, #32CD32, #228B22);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 0 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn.reset {
+            background: linear-gradient(145deg, #FF6347, #DC143C);
+        }
+
+        .center{
+            color: #faf103;
+            background: #000000;
+            padding: 8px 20px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .feedback {
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 15px;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .feedback.success {
+            background: linear-gradient(145deg, #90EE90, #32CD32);
+            color: #006400;
+        }
+
+        .feedback.error {
+            background: linear-gradient(145deg, #FFB6C1, #FF69B4);
+            color: #8B0000;
+        }
+
+        .celebration {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 4em;
+            z-index: 1000;
+            pointer-events: none;
+            animation: celebrate 2s ease-out;
+        }
+
+        @keyframes celebrate {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+        }
+
+        @media (max-width: 768px) {
+            .game-area {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .sequence-slot::before {
+                left: -30px;
+                width: 25px;
+                height: 25px;
+                font-size: 0.9em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="center" id="center">
+            <h1>MARS Academy</h1>
+        </div>
+        <div class="pb" id="pb">
+            <h1>🥜🍇 PB&J Sandwich Maker! 🍞✨</h1>
+        </div>
+
+        
+        <div class="instructions">
+            Drag the steps in the correct order to make the perfect peanut butter and jelly sandwich!
+        </div>
+
+        <div class="game-area">
+            <div class="steps-container">
+                <div class="container-title">📝 Steps to Arrange</div>
+                <div id="steps-pool">
+                    <div class="step-item" draggable="true" data-correct="6">Put the top slice of bread on the sandwich</div>
+                    <div class="step-item" draggable="true" data-correct="2">Get two slices of bread</div>
+                    <div class="step-item" draggable="true" data-correct="4">Spread peanut butter on one slice</div>
+                    <div class="step-item" draggable="true" data-correct="1">Wash your hands</div>
+                    <div class="step-item" draggable="true" data-correct="3">Get peanut butter and jelly</div>
+                    <div class="step-item" draggable="true" data-correct="5">Spread jelly on the other slice</div>
+                </div>
+            </div>
+
+            <div class="sequence-container">
+                <div class="container-title">🔢 Correct Order</div>
+                <div id="sequence-area">
+                    <div class="sequence-slot" data-step="1">Step 1: Drop here!</div>
+                    <div class="sequence-slot" data-step="2">Step 2: Drop here!</div>
+                    <div class="sequence-slot" data-step="3">Step 3: Drop here!</div>
+                    <div class="sequence-slot" data-step="4">Step 4: Drop here!</div>
+                    <div class="sequence-slot" data-step="5">Step 5: Drop here!</div>
+                    <div class="sequence-slot" data-step="6">Step 6: Drop here!</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn" onclick="checkSequence()">Check My Answer! 🧐</button>
+            <button class="btn reset" onclick="resetGame()">Start Over 🔄</button>
+        </div>
+
+        <div id="feedback" class="feedback" style="display: none;"></div>
+    </div>
+
+    <script>
+        let draggedElement = null;
+        let completedSteps = 0;
+
+        // Audio context for sound effects
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSuccessSound() {
+            const frequency = 523.25; // C5 note
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+        }
+
+        function playSadSound() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 1);
+            oscillator.type = 'sawtooth';
+            
+            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 1);
+        }
+
+        function playVictorySound() {
+            // Play a happy melody
+            const notes = [261.63, 329.63, 392.00, 523.25]; // C, E, G, C
+            notes.forEach((frequency, index) => {
+                setTimeout(() => {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+                    oscillator.type = 'sine';
+                    
+                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                    
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.3);
+                }, index * 150);
+            });
+        }
+
+        // Initialize drag and drop functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const stepItems = document.querySelectorAll('.step-item');
+            const sequenceSlots = document.querySelectorAll('.sequence-slot');
+
+            stepItems.forEach(item => {
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragend', handleDragEnd);
+            });
+
+            sequenceSlots.forEach(slot => {
+                slot.addEventListener('dragover', handleDragOver);
+                slot.addEventListener('drop', handleDrop);
+                slot.addEventListener('dragenter', handleDragEnter);
+                slot.addEventListener('dragleave', handleDragLeave);
+            });
+        });
+
+        function handleDragStart(e) {
+            draggedElement = e.target;
+            e.target.classList.add('dragging');
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+        }
+
+        function handleDragEnter(e) {
+            e.preventDefault();
+            if (e.target.classList.contains('sequence-slot')) {
+                e.target.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(e) {
+            if (e.target.classList.contains('sequence-slot')) {
+                e.target.classList.remove('drag-over');
+            }
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const slot = e.target;
+            
+            if (slot.classList.contains('sequence-slot') && !slot.classList.contains('filled')) {
+                // Move the dragged element to the slot
+                const stepText = draggedElement.textContent;
+                const correctOrder = draggedElement.getAttribute('data-correct');
+                
+                slot.textContent = stepText;
+                slot.classList.add('filled');
+                slot.setAttribute('data-correct', correctOrder);
+                slot.classList.remove('drag-over');
+                
+                // Remove the original step from the pool
+                draggedElement.remove();
+                
+                completedSteps++;
+                
+                // Auto-check if all steps are placed
+                if (completedSteps === 6) {
+                    setTimeout(checkSequence, 500);
+                }
+            }
+        }
+
+        function checkSequence() {
+            const filledSlots = document.querySelectorAll('.sequence-slot.filled');
+            const feedback = document.getElementById('feedback');
+            
+            if (filledSlots.length === 0) {
+                showFeedback('Please arrange some steps first! 🤔', 'error');
+                return;
+            }
+            
+            let isCorrect = true;
+            let firstError = -1;
+            
+            filledSlots.forEach((slot, index) => {
+                const correctOrder = parseInt(slot.getAttribute('data-correct'));
+                const expectedOrder = index + 1;
+                
+                if (correctOrder !== expectedOrder && firstError === -1) {
+                    firstError = index + 1;
+                    isCorrect = false;
+                }
+            });
+            
+            if (isCorrect && filledSlots.length === 6) {
+                showFeedback('🎉 Perfect! You made an amazing PB&J sandwich! 🥪', 'success');
+                playVictorySound();
+                showCelebration();
+            } else {
+                if (filledSlots.length < 6) {
+                    showFeedback('Keep going! You need to arrange all 6 steps! 💪', 'error');
+                } else {
+                    showFeedback(`Oops! Step ${firstError} is not in the right place. Try again! 🤗`, 'error');
+                }
+                playSadSound();
+            }
+        }
+
+        function showFeedback(message, type) {
+            const feedback = document.getElementById('feedback');
+            feedback.textContent = message;
+            feedback.className = `feedback ${type}`;
+            feedback.style.display = 'flex';
+            
+            setTimeout(() => {
+                feedback.style.display = 'none';
+            }, 4000);
+        }
+
+        function showCelebration() {
+            const celebration = document.createElement('div');
+            celebration.className = 'celebration';
+            celebration.textContent = '🎉🥪🎉';
+            document.body.appendChild(celebration);
+            
+            setTimeout(() => {
+                document.body.removeChild(celebration);
+            }, 2000);
+        }
+
+        function resetGame() {
+            // Clear sequence slots
+            const sequenceSlots = document.querySelectorAll('.sequence-slot');
+            sequenceSlots.forEach((slot, index) => {
+                slot.textContent = `Step ${index + 1}: Drop here!`;
+                slot.className = 'sequence-slot';
+                slot.removeAttribute('data-correct');
+            });
+            
+            // Restore steps pool
+            const stepsPool = document.getElementById('steps-pool');
+            stepsPool.innerHTML = `
+                <div class="step-item" draggable="true" data-correct="6">Put the top slice of bread on the sandwich</div>
+                <div class="step-item" draggable="true" data-correct="2">Get two slices of bread</div>
+                <div class="step-item" draggable="true" data-correct="4">Spread peanut butter on one slice</div>
+                <div class="step-item" draggable="true" data-correct="1">Wash your hands</div>
+                <div class="step-item" draggable="true" data-correct="3">Get peanut butter and jelly</div>
+                <div class="step-item" draggable="true" data-correct="5">Spread jelly on the other slice</div>
+            `;
+            
+            // Re-initialize event listeners
+            const stepItems = document.querySelectorAll('.step-item');
+            stepItems.forEach(item => {
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragend', handleDragEnd);
+            });
+            
+            // Hide feedback
+            document.getElementById('feedback').style.display = 'none';
+            completedSteps = 0;
+        }
+
+        // Initialize audio context on first user interaction
+        document.addEventListener('click', function initAudio() {
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            document.removeEventListener('click', initAudio);
+        });
+    </script>
+</body>
+</html>
